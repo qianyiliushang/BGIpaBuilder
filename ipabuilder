@@ -36,11 +36,11 @@ function createPlist() {
 	fi
 	method="enterprise"
 	exportFormat="IPA"
-	exportSigningIdentity="iPhone Distribution: TuanChe Internet Technology (Beijing) Co., Ltd."
-	exportInstallerIdentity="iPhone Distribution: TuanChe Internet Technology (Beijing) Co., Ltd."
+	exportSigningIdentity=""
+	exportInstallerIdentity=""
 	if [ "$2" != "" ];then
-		exportSigningIdentity="$1"
-		exportInstallerIdentity="$1"
+		exportSigningIdentity="$2"
+		exportInstallerIdentity="$2"
 	fi
 	plistContent="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 				<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
