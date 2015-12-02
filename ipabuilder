@@ -1,0 +1,247 @@
+#!/bin/bash
+#---------------------------------------
+#功能：打ipa包
+#涉及到命令：
+#xcodebuild -project /Users/user/lcg/svn/TuanChe_build/TuanChe.xcodeproj/ -scheme Test -archivePath build/Tuanche.xcarchive archive CODE_SIGN_IDENTITY="iPhone Distribution:xxx" PROVISIONING_PROFILE="xxx"
+#xcodebuild -exportArchive -archivePath build/Tuanche.xcarchive/ -exportPath Test.ipa -exportOptionsPlist test.plist
+#
+#使用说明：
+#		当前工程目录下，不需要指定目录，编译project和workspace都使用：
+#			ipabuilder <schemeName> [-o <ipa output directory>] [-s <Code Signing Identity>] [-m <Provisioning Profile>]
+#		指定工程目录，编译project
+#			ipabuilder <schemeName> -p <project directory>	[-o <ipa output directory>] [-s <Code Signing Identity>] [-m <Provisioning Profile>]
+#		指定工程目录，编译workspace
+#			ipabuilder <schemeName> -w <workspace directory>	[-o <ipa output directory>] [-s <Code Signing Identity>] [-m <Provisioning Profile>]
+#
+#可选参数：  
+#	-p PATH		project directory，默认当前目录
+#	-w PATH		workspace directory，默认当前目录
+#	-o PATH		输出ipa的文件目录，默认当前目录
+#	-s NAME		签名证书，不给值默认使用工程中的配置
+#	-m NAME		描述文件名的id，不给值默认使用工程中的配置
+#
+#---------------------------------------
+
+#查看必选参数是否传递
+if [ $# -lt 1 ];then
+	echo "Error: must input schemename"
+	exit 2
+fi
+
+#参数: $1 文件名  $2签名证书
+function createPlist() {
+	if [ $1 == "" ];then
+		echo "method: createPlist msg:please input file name"
+		return -1
+	fi
+	method="enterprise"
+	exportFormat="IPA"
+	exportSigningIdentity="iPhone Distribution: TuanChe Internet Technology (Beijing) Co., Ltd."
+	exportInstallerIdentity="iPhone Distribution: TuanChe Internet Technology (Beijing) Co., Ltd."
+	if [ "$2" != "" ];then
+		exportSigningIdentity="$1"
+		exportInstallerIdentity="$1"
+	fi
+	plistContent="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+				<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+				<plist version=\"1.0\">
+				<dict>
+					<key>method</key>
+					<string>$method</string>
+					<key>exportFormat</key>
+					<string>$exportFormat</string>
+					<key>exportSigningIdentity</key>
+					<string>$exportSigningIdentity</string>
+					<key>exportInstallerIdentity</key>
+					<string>$exportInstallerIdentity</string>
+				</dict>
+				</plist>"
+	echo $plistContent > $1
+}
+
+function usage() {
+	echo "
+使用说明：
+	当前工程目录下，不需要指定目录，编译project和workspace都使用：
+	ipabuilder <schemeName> [-o <ipa output directory>] [-s <Code Signing Identity>] [-m <Provisioning Profile>]
+	指定工程目录，编译project
+	ipabuilder <schemeName> -p <project directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-m <Provisioning Profile>]
+	指定工程目录，编译workspace
+	ipabuilder <schemeName> -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-m <Provisioning Profile>]
+
+可选参数：  
+	-p PATH		project directory，默认当前目录
+	-w PATH		workspace directory，默认当前目录
+	-o PATH		输出ipa的文件目录，默认当前目录
+	-s NAME		签名证书，不给值默认使用工程中的配置
+	-m NAME		描述文件，不给值默认使用工程中的配置
+"
+}
+
+#查找是否存在一个以第一个参数结尾的文件
+function findFileForGiveSuffix() {
+	if [ $1 == "" ];then
+		echo "plese input suffix"
+		return -1
+	fi
+	matchSuffix="*.$1"
+	ls $project_path/$matchSuffix &>/dev/null
+	returnValue=$?
+	if [ $returnValue = 0 ];then
+		project_name=$(echo $(basename $project_path/$matchSuffix))
+		return 0
+	else
+		return -1
+	fi
+}
+
+#scheme名
+build_scheme=$1
+
+#当前路径
+current_path=$(pwd)
+output_path=${current_path}
+project_path=${current_path}
+#归档类型，默认为0，自己查找；1为project；2为workspace
+archiveType=0
+
+#后面带冒号，说明需要带参数
+param_pattern="p:w:o:s:m:h"
+OPTIND=2
+while getopts $param_pattern optname
+	do
+		#保存临时变量
+		tmp_optind=$OPTIND
+		tmp_optname=$optname
+		tmp_optarg=$OPTARG
+
+		#对参数进行检查
+		OPTIND=$OPTIND-1
+		if getopts $param_pattern optname ;then
+			echo $param_pattern
+			echo  "Error: argument value for option $tmp_optname"
+			usage
+			exit 2
+		fi
+
+		#恢复变量
+		OPTIND=$tmp_optind
+		optname=$tmp_optname
+
+		case "$optname" in
+			"p")
+				if [ ! -d $tmp_optarg ];then
+					echo "Error: The value of option p must be an exist directory."
+					exit 2
+				fi
+				project_path=$tmp_optarg
+				archiveType=1
+		        ;;
+		    "w")
+				if [ ! -d $tmp_optarg ];then
+					echo "Error: The value of option w must be an exist directory."
+					usage
+					exit 2
+				fi
+				project_path=$tmp_optarg
+				archiveType=2
+				;;
+		    "o")
+				if [ ! -d $tmp_optarg ];then
+					echo "Error: The value of option o must be an exist directory."
+					usage
+					exit 2
+				fi
+
+				#获取目录，去掉目录后面的/
+				cd $tmp_optarg
+				output_path=$(pwd)
+				cd $current_path
+				;;
+		    "s")
+				build_sign=$tmp_optarg				
+		        ;;
+		    "m")
+				build_profile=$tmp_optarg
+		        ;;
+	        "?")
+		        echo "Error: Unknown option $OPTARG"
+		        usage
+				exit 2
+		        ;;
+		    ":")
+		        echo "Error: No argument value for option $OPTARG"
+		        usage
+				exit 2
+		        ;;
+		    *)
+		      # Should not occur
+		        echo "Error: Unknown error while processing options"
+		        usage
+				exit 2
+		        ;;
+		esac
+	done
+
+#确定是workspace还是project
+if [ $archiveType == 2 ];then
+	findFileForGiveSuffix "xcworkspace"
+	commandPart=" -workspace $project_name"
+	findReturnValue=$?
+elif [ $archiveType == 1 ];then
+	findFileForGiveSuffix "xcodeproj"
+	findReturnValue=$?
+else
+	#这里先查找xcworkspace文件，然后再查找xcodeproj
+	findFileForGiveSuffix "xcworkspace"
+	findReturnValue=$?
+	if [ $findReturnValue == 0 ];then
+		commandPart=" -workspace $project_name"
+	else
+		findFileForGiveSuffix "xcodeproj"
+		findReturnValue=$?
+	fi
+fi
+
+#没有找到，则报错
+if [ $findReturnValue != 0 ];then
+	echo "Error: cant't find xcodeproj or xcworkspace file"
+	exit 2
+fi
+
+#进入工程目录，并且去掉多余的/
+cd ${project_path}
+project_path=$(pwd)
+
+#create build path
+build_path="${project_path}/build"
+if [ ! -d ${build_path} ];then
+	mkdir ${build_path}
+fi
+
+#archive路径
+archive_path="${build_path}/${build_scheme}.xcarchive"
+
+#make up build command
+build_cmd='xcodebuild archive'$commandPart
+
+cd $project_path
+build_cmd=${build_cmd}' -scheme '${build_scheme}' -archivePath '${archive_path}
+if [ "$build_sign" != "" ];then
+	build_cmd="${build_cmd} CODE_SIGN_IDENTITY=\"$build_sign\""
+fi
+if [ "$build_profile" != "" ];then
+	build_cmd=${build_cmd}' PROVISIONING_PROFILE="'${build_profile}'"'
+fi
+
+echo $build_cmd
+
+#开始打包，生成xcarchive文件
+eval ${build_cmd} || exit -1
+
+#生成exportOptionsPlist文件
+exportOptionsPlist="exportOptionsPlist.plist"
+createPlist "$exportOptionsPlist" "$build_sign"
+
+#导出ipa包
+xcodebuild -exportArchive -archivePath ${archive_path} -exportPath $output_path -exportOptionsPlist $exportOptionsPlist
