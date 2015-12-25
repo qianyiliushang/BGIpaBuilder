@@ -208,10 +208,16 @@ if [ "$buildBundleId" != "" ];then
 	echo "set Info.plist bunldId to $buildBundleId"
 	appInfoPlistPath=$project_path/$appName/Info.plist
 	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appInfoPlistPath
-	appTestInfoPlistPath="$project_path/${appName}Tests/Info.plist"
-	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appTestInfoPlistPath
-	appUITestInfoPlistPath="$project_path/${appName}UITests/Info.plist"
-	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appUITestInfoPlistPath
+	#如果存在Test，则也更改Test
+	if [ -d "$project_path/${appName}Tests" ]; then
+		appTestInfoPlistPath="$project_path/${appName}Tests/Info.plist"
+		/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appTestInfoPlistPath
+	fi
+	#如果存在UITest，则修改UITest
+	if [ -d "$project_path/${appName}UITests" ]; then
+		appUITestInfoPlistPath="$project_path/${appName}UITests/Info.plist"
+		/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appUITestInfoPlistPath
+	fi
 fi
 
 #create build path
