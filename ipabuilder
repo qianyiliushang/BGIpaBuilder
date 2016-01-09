@@ -1,6 +1,8 @@
 #!/bin/bash
 #---------------------------------------
+#code: https://github.com/liuchungui/BGIpaBuilder.git
 #功能：打ipa包
+#
 #涉及到命令：
 #xcodebuild -project /Users/user/lcg/svn/TuanChe_build/TuanChe.xcodeproj/ -scheme Test -archivePath build/Tuanche.xcarchive archive CODE_SIGN_IDENTITY="iPhone Distribution:xxx" PROVISIONING_PROFILE="xxx"
 #xcodebuild -exportArchive -archivePath build/Tuanche.xcarchive/ -exportPath Test.ipa -exportOptionsPlist test.plist
@@ -9,9 +11,9 @@
 #	当前工程目录下，不需要指定目录，已经在工程中配置好证书和bundleId，不需要任何参数：
 #	ipabuilder
 #	指定工程目录，编译project
-#	ipabuilder -p <project directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>]
+#	ipabuilder -p <project directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>] [-v <version>] [-d <build version>]
 #	指定工程目录，编译workspace
-#	ipabuilder -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>]
+#	ipabuilder -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>] [-v <version>] [-d <build version>]
 
 #
 #可选参数：  
@@ -23,6 +25,8 @@
 #   -c NAME     指定scheme名称，默认使用工程项目名作为scheme
 #   -m NAME     指定method，现在只有app-store、enterprise、ad-hoc、development、空五种，默认为空
 #   -b NAME     指定工程的bundleId
+#   -v NAME     修改版本号，Version
+#   -d NAME     修改build version
 # 
 #---------------------------------------
 
@@ -45,6 +49,8 @@ function usage() {
    	-c NAME     指定scheme名称，默认使用工程项目名作为scheme
    	-m NAME     指定method，现在只有app-store、enterprise、ad-hoc、development、空五种，默认为空
    	-b NAME     指定工程的bundleId
+	-v NAME     修改版本号，Version
+	-d NAME     修改build version
 "
 }
 
@@ -74,7 +80,7 @@ buildMethod=""
 archiveType=0
 
 #后面带冒号，说明需要带参数
-param_pattern="p:w:o:s:f:c:m:b:"
+param_pattern="p:w:o:s:f:c:m:b:v:d:"
 OPTIND=1
 while getopts $param_pattern optname
 	do
@@ -147,6 +153,12 @@ while getopts $param_pattern optname
 			"b")
 				buildBundleId=$tmp_optarg
 				;;
+			"v")
+				version=$tmp_optarg
+				;;
+			"d")
+				buildVersion=$tmp_optarg;
+				;;
 	        "?")
 		        echo "Error: Unknown option $OPTARG"
 		        usage
@@ -203,11 +215,14 @@ else
 	fi
 fi
 
+#info.plist文件路径
+appInfoPlistPath=$project_path/$appName/Info.plist
+
 #设置了bundleId则，修改bundldId
 if [ "$buildBundleId" != "" ];then
 	echo "set Info.plist bunldId to $buildBundleId"
-	appInfoPlistPath=$project_path/$appName/Info.plist
 	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appInfoPlistPath
+
 	#如果存在Test，则也更改Test
 	if [ -d "$project_path/${appName}Tests" ]; then
 		appTestInfoPlistPath="$project_path/${appName}Tests/Info.plist"
@@ -218,6 +233,18 @@ if [ "$buildBundleId" != "" ];then
 		appUITestInfoPlistPath="$project_path/${appName}UITests/Info.plist"
 		/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appUITestInfoPlistPath
 	fi
+fi
+
+#设置版本号
+if [ "$version" != "" ]; then
+	echo "ipabuilder: set Info.plist version to $version"
+	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" $appInfoPlistPath
+fi
+
+#设置build版本号
+if [ "$buildVersion" != "" ]; then
+	echo "ipabuilder: set Info.plist build version to $buildVersion"
+	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $buildVersion" $appInfoPlistPath
 fi
 
 #create build path
