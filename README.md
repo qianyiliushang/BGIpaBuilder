@@ -24,20 +24,16 @@
     ./ipabuilder -p /Users/user/lcg/code/BGUnlockControllerDemo -b "com.liuchungui.test" -s "iPhone Distribution: xxxxx" -f "888888-7bf6-42af-bd87-b6bf4a720993" -m enterprise
     
 更多的使用，请查看下面的Usage。
-##Usage： 
-当前工程目录下，不需要指定目录，已经在工程中配置好证书和bundleId，不需要任何参数：
-	
-	ipabuilder    
-指定工程目录，编译project    
-	
-	ipabuilder -p <project directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>]
-	
-指定工程目录，编译workspace
-	
-	ipabuilder -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>]
+##Usage：    
+使用说明：
+	当前工程目录下，不需要指定目录，已经在工程中配置好证书和bundleId，不需要任何参数：
+	ipabuilder
+	指定工程目录，编译project
+	ipabuilder -p <project directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>] [-b <bunlde identifier>] [-v <version>] [-d <build version>]
+	指定工程目录，编译workspace
+	ipabuilder -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>] [-b <bunlde identifier>] [-v <version>] [-d <build version>]
 
 可选参数：  
-
 	-p PATH		project directory，默认当前目录
 	-w PATH		workspace directory，默认当前目录
 	-o PATH		输出ipa的文件目录，默认当前目录
@@ -46,3 +42,5 @@
    	-c NAME     指定scheme名称，默认使用工程项目名作为scheme
    	-m NAME     指定method，现在只有app-store、enterprise、ad-hoc、development、空五种，默认为空
    	-b NAME     指定工程的bundleId
+	-v NAME     修改版本号，Version
+	-d NAME     修改build version
