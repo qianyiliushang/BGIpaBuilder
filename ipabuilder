@@ -16,7 +16,7 @@
 #	ipabuilder -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>] [-v <version>] [-d <build version>]
 
 #
-#可选参数：  
+#可选参数：
 #	-p PATH		project directory，默认当前目录
 #	-w PATH		workspace directory，默认当前目录
 #	-o PATH		输出ipa的文件目录，默认当前目录
@@ -27,7 +27,7 @@
 #   -b NAME     指定工程的bundleId
 #   -v NAME     修改版本号，Version
 #   -d NAME     修改build version
-# 
+#
 #---------------------------------------
 
 function usage() {
@@ -40,7 +40,7 @@ function usage() {
 	指定工程目录，编译workspace
 	ipabuilder -w <workspace directory> [-o <ipa output directory>] [-s <Code Signing Identity>] [-f <Provisioning Profile>] [-m <export method>] [-c <schemename>] [-b <bunlde identifier>]
 
-可选参数：  
+可选参数：
 	-p PATH		project directory，默认当前目录
 	-w PATH		workspace directory，默认当前目录
 	-o PATH		输出ipa的文件目录，默认当前目录
@@ -133,7 +133,7 @@ while getopts $param_pattern optname
 				cd $current_path
 				;;
 		    "s")
-				build_sign=$tmp_optarg				
+				build_sign=$tmp_optarg
 		        ;;
 		    "f")
 				build_profile=$tmp_optarg
@@ -216,7 +216,13 @@ else
 fi
 
 #info.plist文件路径
+#update, for projects which default plist is not Info.plist
 appInfoPlistPath=$project_path/$appName/Info.plist
+
+if [[ ! -e "$appInfoPlistPath" ]]; then
+    appInfoPlistPath=${project_path}/${appName}/${appName}-Info.plist
+fi
+echo "find plist path [${appInfoPlistPath}]"
 
 #设置了bundleId则，修改bundldId
 if [ "$buildBundleId" != "" ];then
@@ -226,11 +232,19 @@ if [ "$buildBundleId" != "" ];then
 	#如果存在Test，则也更改Test
 	if [ -d "$project_path/${appName}Tests" ]; then
 		appTestInfoPlistPath="$project_path/${appName}Tests/Info.plist"
+		if [[ ! -e "$appTestInfoPlistPath" ]]; then
+			appTestInfoPlistPath=${project_path}/${appName}Tests/${appName}-Info.plist
+		fi
+		echo "find test plist path [${appTestInfoPlistPath}]"
 		/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appTestInfoPlistPath
 	fi
 	#如果存在UITest，则修改UITest
 	if [ -d "$project_path/${appName}UITests" ]; then
 		appUITestInfoPlistPath="$project_path/${appName}UITests/Info.plist"
+		if [[ ! -e "$appUITestInfoPlistPath" ]]; then
+			appUITestInfoPlistPath=$project_path/${appName}UITests/${appName}-Info.plist
+		fi
+		echo "find uitest plist path [${appUITestInfoPlistPath}]"
 		/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $buildBundleId" $appUITestInfoPlistPath
 	fi
 fi
@@ -260,15 +274,26 @@ archive_path="${build_path}/${buildSchemeName}.xcarchive"
 build_cmd='xcodebuild archive '$commandPart
 
 cd $project_path
+configFilePath=$project_path/$project_name/project.pbxproj
+echo "find config file path: $configFilePath"
 build_cmd=${build_cmd}' -scheme '${buildSchemeName}' -archivePath '${archive_path}
 if [ "$build_sign" != "" ];then
-	build_cmd="${build_cmd} CODE_SIGN_IDENTITY=\"$build_sign\""
+	#update CODE_SIGN_IDENTITY
+	#build_cmd="${build_cmd} CODE_SIGN_IDENTITY=\"$build_sign\""
+	sed -i '' "s/CODE_SIGN_IDENTITY =.*/CODE_SIGN_IDENTITY = \""$build_sign"\";/g" $configFilePath
+	sed -i '' "s/\"CODE_SIGN_IDENTITY\[sdk=\*.*/\"CODE_SIGN_IDENTITY[sdk=\*]\" = \""$build_sign"\";/g" $configFilePath
+	sed -i '' "s/\"CODE_SIGN_IDENTITY\[sdk=iphoneos\*.*/\"CODE_SIGN_IDENTITY[iphoneos=\*]\" = \""$build_sign"\";/g" $configFilePath
+
 fi
 if [ "$build_profile" != "" ];then
-	build_cmd=${build_cmd}' PROVISIONING_PROFILE="'${build_profile}'"'
+	#build_cmd=${build_cmd}' PROVISIONING_PROFILE="'${build_profile}'"'
+	sed -i '' "s/PROVISIONING_PROFILE =.*/PROVISIONING_PROFILE = \""${build_profile}"\";/g" $configFilePath
+	sed -i '' "s/\"PROVISIONING_PROFILE\[sdk=\*.*/\"PROVISIONING_PROFILE[sdk=\*]\" = \""${build_profile}"\";/g" $configFilePath
+	sed -i '' "s/\"PROVISIONING_PROFILE\[sdk=iphoneos\*.*/\"PROVISIONING_PROFILE[sdk=iphoneos\*]\" = \""${build_profile}"\";/g" $configFilePath
 fi
 if [ "$buildBundleId" != "" ];then
-	build_cmd=${build_cmd}' PRODUCT_BUNDLE_IDENTIFIER="'${buildBundleId}'"'
+	#build_cmd=${build_cmd}' PRODUCT_BUNDLE_IDENTIFIER="'${buildBundleId}'"'
+	sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER =.*/PRODUCT_BUNDLE_IDENTIFIER = \""${buildBundleId}"\";/g" $configFilePath
 fi
 
 echo $build_cmd
