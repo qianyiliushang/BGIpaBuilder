@@ -280,9 +280,10 @@ build_cmd=${build_cmd}' -scheme '${buildSchemeName}' -archivePath '${archive_pat
 if [ "$build_sign" != "" ];then
 	#update CODE_SIGN_IDENTITY
 	#build_cmd="${build_cmd} CODE_SIGN_IDENTITY=\"$build_sign\""
-	sed -i '' "s/CODE_SIGN_IDENTITY =.*/CODE_SIGN_IDENTITY = \""$build_sign"\";/g" $configFilePath
-	sed -i '' "s/\"CODE_SIGN_IDENTITY\[sdk=\*.*/\"CODE_SIGN_IDENTITY[sdk=\*]\" = \""$build_sign"\";/g" $configFilePath
-	sed -i '' "s/\"CODE_SIGN_IDENTITY\[sdk=iphoneos\*.*/\"CODE_SIGN_IDENTITY[iphoneos=\*]\" = \""$build_sign"\";/g" $configFilePath
+	echo "Signing is $build_sign"
+	sed -i '' "s/CODE_SIGN_IDENTITY =.*/CODE_SIGN_IDENTITY = \"${build_sign}\";/g" $configFilePath
+	sed -i '' "s/\"CODE_SIGN_IDENTITY\[sdk=\*.*/\"CODE_SIGN_IDENTITY[sdk=\*]\" = \"${build_sign}\";/g" $configFilePath
+	sed -i '' "s/\"CODE_SIGN_IDENTITY\[sdk=iphoneos\*.*/\"CODE_SIGN_IDENTITY[iphoneos=\*]\" = \"${build_sign}\";/g" $configFilePath
 
 fi
 if [ "$build_profile" != "" ];then
@@ -321,10 +322,10 @@ if [ "$buildFormat" != "" ];then
 fi
 
 #如果设置了签名证书，则添加
-if [ "$build_sign" != "" ];then
-	/usr/libexec/PlistBuddy -c "Add :exportSigningIdentity string \"$build_sign\"" $exportOptionsPlist
-	/usr/libexec/PlistBuddy -c "Add :exportInstallerIdentity string \"$build_sign\"" $exportOptionsPlist
-fi
-
+#if [ "$build_sign" != "" ];then
+#	/usr/libexec/PlistBuddy -c "Add :exportSigningIdentity string \"$build_sign\"" $exportOptionsPlist
+#	/usr/libexec/PlistBuddy -c "Add :exportInstallerIdentity string \"$build_sign\"" $exportOptionsPlist
+#fi
+#echo "exportOptionsPlist is [${exportOptionsPlist}]"
 #导出ipa包
 xcodebuild -exportArchive -archivePath ${archive_path} -exportPath $output_path -exportOptionsPlist $exportOptionsPlist
